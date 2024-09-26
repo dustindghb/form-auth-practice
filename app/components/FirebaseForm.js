@@ -1,8 +1,9 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from './firebaseConfig';
+import { getAuth } from 'firebase/auth'; 
+import { db } from '../firebaseConfig';
 import TextField from '@mui/material/TextField';
 
 async function addDataToFireStore(name, email, message) {
@@ -11,30 +12,46 @@ async function addDataToFireStore(name, email, message) {
       name: name,
       email: email,
       message: message,
-      timestamp: serverTimestamp()
+      timestamp: serverTimestamp(),
     });
     console.log("Document written with ID: ", docRef.id);
     return true;
-  }  catch (error) {
-    console.error("Error adding document", error);
+  } catch (error) {
+    console.error("Error adding document:", error);
     return false;
   }
 }
 
 export default function FirebaseForm() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState(""); // Email is now handled by Firebase
+  const [message, setMessage] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [message, setMessage] = useState("")
+  useEffect(() => {
+    const auth = getAuth();
+    if (auth.currentUser) {
+      setIsAuthenticated(true);
+      setEmail(auth.currentUser.email);  // Automatically set the email
+      alert("You are logged in as " + auth.currentUser.displayName);
+    } else {
+      alert("You are not logged in! Please log in to submit the form.");
+    }
+  }, []); 
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
+    if (!email) {
+      alert("No email found, please log in.");
+      return;
+    }
     const added = await addDataToFireStore(name, email, message);
     if (added) {
       setName("");
-      setEmail("");
       setMessage("");
-      alert("Data added to firestore db")
+      alert("Data added to Firestore successfully");
+    } else {
+      alert("Failed to add data. Please try again.");
     }
   };
 
@@ -53,24 +70,12 @@ export default function FirebaseForm() {
         />
       </div>
       <div className='mb-4'>
-        <label htmlFor='email' className='block text-gray-700 font-bold mb-2'>
-          Email:
-        </label>
-        <TextField
-          id="outlined-basic"
-          label="Enter email"
-          variant="outlined"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </div>
-      <div className='mb-4'>
         <label htmlFor='message' className='block text-gray-700 font-bold mb-2'>
           Message:
         </label>
         <TextField
           id="standard-multiline-flexible"
-          label="Enter answer"
+          label="Enter message"
           multiline
           maxRows={16}
           variant="standard"
